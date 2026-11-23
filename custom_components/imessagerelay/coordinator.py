@@ -4,7 +4,6 @@ import asyncio
 import uuid
 from datetime import timedelta
 
-import async_timeout
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -32,7 +31,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self) -> dict:
         session = async_get_clientsession(self.hass)
         try:
-            async with async_timeout.timeout(10):
+            async with asyncio.timeout(10):
                 async with session.get(
                     f"{self._base_url}/health", headers=self._headers, ssl=False
                 ) as resp:
@@ -59,7 +58,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
             payload["attach"] = attach
 
         session = async_get_clientsession(self.hass)
-        async with async_timeout.timeout(60):
+        async with asyncio.timeout(60):
             async with session.post(
                 f"{self._base_url}/send",
                 headers={**self._headers, "Idempotency-Key": str(uuid.uuid4()), "Content-Type": "application/json"},
@@ -71,7 +70,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
 
     async def async_add_alias(self, name: str, contact: str) -> None:
         session = async_get_clientsession(self.hass)
-        async with async_timeout.timeout(10):
+        async with asyncio.timeout(10):
             async with session.post(
                 f"{self._base_url}/alias",
                 headers={**self._headers, "Content-Type": "application/json"},
@@ -82,7 +81,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
 
     async def async_remove_alias(self, name: str) -> None:
         session = async_get_clientsession(self.hass)
-        async with async_timeout.timeout(10):
+        async with asyncio.timeout(10):
             async with session.delete(
                 f"{self._base_url}/alias/{name}",
                 headers=self._headers,

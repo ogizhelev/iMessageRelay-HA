@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
-import async_timeout
 from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -25,7 +25,7 @@ async def _validate_connection(hass, host: str, port: int, token: str) -> str | 
     """Return None on success, or an error key string on failure."""
     session = async_get_clientsession(hass)
     try:
-        async with async_timeout.timeout(10):
+        async with asyncio.timeout(10):
             async with session.get(
                 f"https://{host}:{port}/health",
                 headers={"Authorization": f"Bearer {token}"},
