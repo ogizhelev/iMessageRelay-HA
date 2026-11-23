@@ -1,0 +1,30 @@
+add_alias:
+  name: Add Alias
+  description: Add or update a recipient alias mapping a short name to an iMessage address.
+  fields:
+    name:
+      name: Alias name
+      description: Short name used in the `to` field when sending (e.g. "alice").
+      required: true
+      example: alice
+      selector:
+        text:
+    contact:
+      name: Contact address
+      description: iMessage-enabled phone number or email (e.g. "+1234567890").
+      required: true
+      example: "+1234567890"
+      selector:
+        text:
+
+remove_alias:
+  name: Remove Alias
+  description: Remove a recipient alias by name.
+  fields:
+    name:
+      name: Alias name
+      description: The alias name to remove.
+      required: true
+      example: alice
+      selector:
+        text:

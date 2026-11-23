@@ -1,0 +1,12 @@
+{
+  "domain": "imessagerelay",
+  "name": "iMessage Relay",
+  "config_flow": true,
+  "documentation": "https://github.com/ogizhelev/iMessageRelay-HA",
+  "requirements": [],
+  "zeroconf": ["_imessagerelay._tcp.local."],
+  "iot_class": "local_polling",
+  "version": "1.0.0",
+  "homeassistant": "2024.1.0",
+  "codeowners": ["@ogizhelev"]
+}

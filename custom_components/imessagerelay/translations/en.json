@@ -1,0 +1,30 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "iMessage Relay",
+        "description": "Connect to your iMessage Relay server running on the iPhone.",
+        "data": {
+          "host": "Host / IP address",
+          "port": "Port",
+          "token": "Bearer Token"
+        }
+      },
+      "zeroconf_confirm": {
+        "title": "iMessage Relay discovered",
+        "description": "Found iMessage Relay at {host}:{port}. Enter your Bearer token to continue.",
+        "data": {
+          "token": "Bearer Token"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect — check the host, port, and that the app is running",
+      "invalid_auth": "Invalid Bearer token",
+      "unknown": "Unexpected error"
+    },
+    "abort": {
+      "already_configured": "This iMessage Relay is already configured"
+    }
+  }
+}
