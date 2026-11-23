@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from time import monotonic
 
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -84,8 +85,11 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
                 json=payload,
                 ssl=self._ssl,
             ) as resp:
-                resp.raise_for_status()
-                return await resp.json()
+                body = await resp.json(content_type=None)
+                if resp.status not in (200, 202):
+                    msg = body.get("error", f"HTTP {resp.status}") if isinstance(body, dict) else f"HTTP {resp.status}"
+                    raise ServiceValidationError(msg)
+                return body
 
     async def async_add_alias(self, name: str, contact: str) -> None:
         session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
@@ -96,7 +100,10 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
                 json={"name": name, "contact": contact},
                 ssl=self._ssl,
             ) as resp:
-                resp.raise_for_status()
+                body = await resp.json(content_type=None)
+                if not resp.ok:
+                    msg = body.get("error", f"HTTP {resp.status}") if isinstance(body, dict) else f"HTTP {resp.status}"
+                    raise ServiceValidationError(msg)
 
     async def async_remove_alias(self, name: str) -> None:
         session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
@@ -106,4 +113,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
                 headers=self._headers,
                 ssl=self._ssl,
             ) as resp:
-                resp.raise_for_status()
+                body = await resp.json(content_type=None)
+                if not resp.ok:
+                    msg = body.get("error", f"HTTP {resp.status}") if isinstance(body, dict) else f"HTTP {resp.status}"
+                    raise ServiceValidationError(msg)
