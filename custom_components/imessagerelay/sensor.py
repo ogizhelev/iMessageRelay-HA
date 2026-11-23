@@ -133,7 +133,7 @@ class AliasesSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
 class WebhookSensor(SensorEntity):
     _attr_icon = "mdi:webhook"
     _attr_has_entity_name = True
-    _attr_name = "Inbound Webhook"
+    _attr_name = "Webhook"
     _attr_should_poll = False
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
@@ -144,8 +144,7 @@ class WebhookSensor(SensorEntity):
 
     @property
     def native_value(self) -> str:
-        webhook_id = self._entry.data.get(CONF_WEBHOOK_ID, "")
-        return f"/api/webhook/{webhook_id}" if webhook_id else "not configured"
+        return "active" if self._entry.data.get(CONF_WEBHOOK_ID) else "not configured"
 
     @property
     def extra_state_attributes(self) -> dict:

@@ -141,7 +141,7 @@ data:
 | `sensor.imessage_relay_queue_depth` | Number of jobs waiting | `uptime`, `last_callback_at` |
 | `sensor.imessage_relay_runner_state` | `idle` / `dispatching` / `waitingForCallback` | — |
 | `sensor.imessage_relay_aliases` | Number of active aliases | Each alias as `name: contact` |
-| `sensor.imessage_relay_inbound_webhook` | Webhook path | `url` (full URL), `path` |
+| `sensor.imessage_relay_webhook` | `active` / `not configured` | `url` (full URL), `path` |
 
 The **Connection** sensor always reports a state (`connected`/`disconnected`) rather than going unavailable, so automations can react to the server going offline. It updates on every coordinator poll (default 30 s).
 
