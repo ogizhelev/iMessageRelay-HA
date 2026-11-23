@@ -1,17 +1,52 @@
+send_message:
+  name: Send Message
+  description: Send an iMessage to one or more recipients via their alias names.
+  fields:
+    message:
+      name: Message
+      description: The text body to send.
+      required: true
+      example: "Hello from Home Assistant"
+      selector:
+        text:
+          multiline: true
+    target:
+      name: Target aliases
+      description: One or more alias names to send the message to.
+      required: true
+      example:
+        - alice
+      selector:
+        object:
+    attach_name:
+      name: Attachment filename
+      description: Filename for the attached file (required together with attach_data).
+      required: false
+      example: snapshot.jpg
+      selector:
+        text:
+    attach_data:
+      name: Attachment data (base64)
+      description: Base64-encoded content of the file to attach.
+      required: false
+      example: "/9j/4AAQSkZJRgAB..."
+      selector:
+        text:
+
 add_alias:
   name: Add Alias
   description: Add or update a recipient alias mapping a short name to an iMessage address.
   fields:
     name:
       name: Alias name
-      description: Short name used in the `to` field when sending (e.g. "alice").
+      description: Short name used in target when sending (e.g. "alice").
       required: true
       example: alice
       selector:
         text:
     contact:
       name: Contact address
-      description: iMessage-enabled phone number or email (e.g. "+1234567890").
+      description: iMessage-enabled phone number or Apple ID email (e.g. "+1234567890").
       required: true
       example: "+1234567890"
       selector:

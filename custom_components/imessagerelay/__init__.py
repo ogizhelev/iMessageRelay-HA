@@ -34,11 +34,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         targets: list[str] = call.data["target"]
         to = ",".join(t.strip() for t in targets)
         message: str = call.data["message"]
-        data: dict = call.data.get("data") or {}
 
         attach: dict | None = None
-        if "attach_name" in data and "attach_data" in data:
-            attach = {"name": data["attach_name"], "data": data["attach_data"]}
+        if "attach_name" in call.data and "attach_data" in call.data:
+            attach = {"name": call.data["attach_name"], "data": call.data["attach_data"]}
 
         result = await coordinator.async_send_message(to, message, attach)
         _LOGGER.debug("iMessage Relay send queued: %s", result)
@@ -60,7 +59,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 {
                     vol.Required("message"): str,
                     vol.Required("target"): vol.All(cv.ensure_list, [str]),
-                    vol.Optional("data"): dict,
+                    vol.Optional("attach_name"): str,
+                    vol.Optional("attach_data"): str,
                 }
             ),
         )
