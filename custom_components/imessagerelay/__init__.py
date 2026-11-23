@@ -4,7 +4,7 @@ import logging
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, Platform
+from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 
 from .const import DOMAIN
@@ -21,6 +21,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         entry.data[CONF_HOST],
         entry.data[CONF_PORT],
         entry.data[CONF_TOKEN],
+        entry.data.get(CONF_VERIFY_SSL, False),
     )
     await coordinator.async_config_entry_first_refresh()
 

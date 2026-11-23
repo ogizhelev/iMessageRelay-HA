@@ -7,14 +7,16 @@
         "data": {
           "host": "Host / IP address",
           "port": "Port",
-          "token": "Bearer Token"
+          "token": "Bearer Token",
+          "verify_ssl": "Verify SSL certificate"
         }
       },
       "zeroconf_confirm": {
         "title": "iMessage Relay discovered",
         "description": "Found iMessage Relay at {host}:{port}. Enter your Bearer token to continue.",
         "data": {
-          "token": "Bearer Token"
+          "token": "Bearer Token",
+          "verify_ssl": "Verify SSL certificate"
         }
       }
     },

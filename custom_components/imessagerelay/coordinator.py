@@ -14,7 +14,9 @@ from .const import DOMAIN, SCAN_INTERVAL
 
 
 class iMessageRelayCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass: HomeAssistant, host: str, port: int, token: str) -> None:
+    def __init__(
+        self, hass: HomeAssistant, host: str, port: int, token: str, verify_ssl: bool = False
+    ) -> None:
         super().__init__(
             hass,
             logger=logging.getLogger(__name__),
@@ -25,16 +27,21 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
         self.port = port
         self.token = token
         self._base_url = f"https://{host}:{port}"
-        self._ssl = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        self._ssl.check_hostname = False
-        self._ssl.verify_mode = ssl.CERT_NONE
+        self._verify_ssl = verify_ssl
+        if verify_ssl:
+            self._ssl: bool | ssl.SSLContext = True
+        else:
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            self._ssl = ctx
 
     @property
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 
     async def _async_update_data(self) -> dict:
-        session = async_get_clientsession(self.hass, verify_ssl=False)
+        session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
         try:
             async with asyncio.timeout(10):
                 async with session.get(
@@ -62,7 +69,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
         if attach:
             payload["attach"] = attach
 
-        session = async_get_clientsession(self.hass, verify_ssl=False)
+        session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
         async with asyncio.timeout(60):
             async with session.post(
                 f"{self._base_url}/send",
@@ -74,7 +81,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
                 return await resp.json()
 
     async def async_add_alias(self, name: str, contact: str) -> None:
-        session = async_get_clientsession(self.hass, verify_ssl=False)
+        session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
         async with asyncio.timeout(10):
             async with session.post(
                 f"{self._base_url}/alias",
@@ -85,7 +92,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
                 resp.raise_for_status()
 
     async def async_remove_alias(self, name: str) -> None:
-        session = async_get_clientsession(self.hass, verify_ssl=False)
+        session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
         async with asyncio.timeout(10):
             async with session.delete(
                 f"{self._base_url}/alias/{name}",
