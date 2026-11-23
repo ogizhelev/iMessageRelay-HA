@@ -19,6 +19,7 @@ async def async_setup_entry(
     coordinator: iMessageRelayCoordinator = hass.data[DOMAIN][entry.entry_id]
     async_add_entities(
         [
+            ConnectionSensor(coordinator, entry),
             QueueDepthSensor(coordinator, entry),
             RunnerStateSensor(coordinator, entry),
             AliasesSensor(coordinator, entry),
@@ -36,6 +37,39 @@ def _device_info(entry: ConfigEntry) -> DeviceInfo:
     )
 
 
+class ConnectionSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
+    _attr_has_entity_name = True
+    _attr_name = "Connection"
+
+    def __init__(self, coordinator: iMessageRelayCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_connection"
+        self._attr_device_info = _device_info(entry)
+
+    @property
+    def available(self) -> bool:
+        return True
+
+    @property
+    def native_value(self) -> str:
+        return "connected" if self.coordinator.last_update_success else "disconnected"
+
+    @property
+    def icon(self) -> str:
+        return "mdi:lan-connect" if self.coordinator.last_update_success else "mdi:lan-disconnect"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        attrs: dict = {
+            "host": self.coordinator.host,
+            "port": self.coordinator.port,
+            "response_time_ms": self.coordinator.response_time_ms,
+        }
+        if self.coordinator.last_seen:
+            attrs["last_seen"] = self.coordinator.last_seen.isoformat()
+        return attrs
+
+
 class QueueDepthSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
     _attr_icon = "mdi:tray-full"
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -50,7 +84,7 @@ class QueueDepthSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity
 
     @property
     def native_value(self) -> int | None:
-        return self.coordinator.data.get("queueDepth")
+        return (self.coordinator.data or {}).get("queueDepth")
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -70,7 +104,7 @@ class RunnerStateSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntit
 
     @property
     def native_value(self) -> str | None:
-        return self.coordinator.data.get("runnerState")
+        return (self.coordinator.data or {}).get("runnerState")
 
 
 class AliasesSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
@@ -87,10 +121,8 @@ class AliasesSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
 
     @property
     def native_value(self) -> int:
-        aliases = (self.coordinator.data or {}).get("aliases", {})
-        return len(aliases)
+        return len((self.coordinator.data or {}).get("aliases", {}))
 
     @property
     def extra_state_attributes(self) -> dict:
-        aliases = (self.coordinator.data or {}).get("aliases", {})
-        return aliases
+        return (self.coordinator.data or {}).get("aliases", {})

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import logging
+import base64
+import os
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 
 from .const import DOMAIN
 from .coordinator import iMessageRelayCoordinator
@@ -36,7 +39,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         message: str = call.data["message"]
 
         attach: dict | None = None
-        if "attach_name" in call.data and "attach_data" in call.data:
+
+        if "attach_file_path" in call.data:
+            path: str = call.data["attach_file_path"]
+            filename = os.path.basename(path)
+
+            def _read_file() -> str:
+                with open(path, "rb") as f:
+                    return base64.b64encode(f.read()).decode("ascii")
+
+            try:
+                encoded = await hass.async_add_executor_job(_read_file)
+            except FileNotFoundError:
+                raise ServiceValidationError(f"File not found: {path}")
+            except PermissionError:
+                raise ServiceValidationError(f"Permission denied reading: {path}")
+            except Exception as exc:
+                raise ServiceValidationError(f"Could not read file: {exc}") from exc
+
+            attach = {"name": filename, "data": encoded}
+
+        elif "attach_name" in call.data and "attach_data" in call.data:
             attach = {"name": call.data["attach_name"], "data": call.data["attach_data"]}
 
         result = await coordinator.async_send_message(to, message, attach)
@@ -59,6 +82,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 {
                     vol.Required("message"): str,
                     vol.Required("target"): vol.All(cv.ensure_list, [str]),
+                    vol.Optional("attach_file_path"): str,
                     vol.Optional("attach_name"): str,
                     vol.Optional("attach_data"): str,
                 }

@@ -66,7 +66,18 @@ data:
     - bob
 ```
 
-With a file attachment (base64-encoded):
+With a file attachment — read and encoded automatically from the HA host filesystem:
+
+```yaml
+service: imessagerelay.send_message
+data:
+  message: "See attached snapshot"
+  target:
+    - alice
+  attach_file_path: /config/www/snapshot.jpg
+```
+
+With a base64-encoded attachment (e.g. from a camera template sensor):
 
 ```yaml
 service: imessagerelay.send_message
@@ -82,8 +93,11 @@ data:
 |-------|----------|-------------|
 | `message` | Yes | Text body |
 | `target` | Yes | List of alias names |
-| `attach_name` | No | Filename for the attachment |
-| `attach_data` | No | Base64-encoded file content (required together with `attach_name`) |
+| `attach_file_path` | No | Path to a file on the HA host — read and base64-encoded automatically |
+| `attach_name` | No | Filename for a manually base64-encoded attachment |
+| `attach_data` | No | Base64-encoded file content (paired with `attach_name`) |
+
+> `attach_file_path` takes precedence over `attach_name`/`attach_data` when both are provided.
 
 ---
 
@@ -123,8 +137,9 @@ data:
 
 | Entity | State | Attributes |
 |--------|-------|------------|
+| `sensor.imessage_relay_connection` | `connected` / `disconnected` | `host`, `port`, `response_time_ms`, `last_seen` |
 | `sensor.imessage_relay_queue_depth` | Number of jobs waiting | `uptime`, `last_callback_at` |
 | `sensor.imessage_relay_runner_state` | `idle` / `dispatching` / `waitingForCallback` | — |
 | `sensor.imessage_relay_aliases` | Number of active aliases | Each alias as `name: contact` |
 
-The **Aliases** sensor state is the count of configured aliases; expand its attributes to see the full name→contact mapping.
+The **Connection** sensor always reports a state (`connected`/`disconnected`) rather than going unavailable, so automations can react to the server going offline. It updates on every coordinator poll (default 30 s).

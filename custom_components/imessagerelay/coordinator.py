@@ -4,7 +4,8 @@ import asyncio
 import logging
 import ssl
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
+from time import monotonic
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -36,6 +37,9 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
             ctx.verify_mode = ssl.CERT_NONE
             self._ssl = ctx
 
+        self.response_time_ms: int | None = None
+        self.last_seen: datetime | None = None
+
     @property
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
@@ -44,11 +48,14 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
         session = async_get_clientsession(self.hass, verify_ssl=self._verify_ssl)
         try:
             async with asyncio.timeout(10):
+                t0 = monotonic()
                 async with session.get(
                     f"{self._base_url}/health", headers=self._headers, ssl=self._ssl
                 ) as resp:
                     resp.raise_for_status()
                     health: dict = await resp.json()
+                self.response_time_ms = round((monotonic() - t0) * 1000)
+                self.last_seen = datetime.now(timezone.utc)
 
                 async with session.get(
                     f"{self._base_url}/aliases", headers=self._headers, ssl=self._ssl

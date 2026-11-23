@@ -18,6 +18,16 @@ send_message:
         - alice
       selector:
         object:
+    attach_file_path:
+      name: Attachment file path
+      description: >
+        Path to a local file on the HA host to attach. The integration reads,
+        base64-encodes, and sends the file automatically. Takes precedence over
+        attach_name/attach_data when both are provided.
+      required: false
+      example: /config/www/snapshot.jpg
+      selector:
+        text:
     attach_name:
       name: Attachment filename
       description: Filename for the attached file (required together with attach_data).
