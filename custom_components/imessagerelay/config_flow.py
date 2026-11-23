@@ -52,7 +52,8 @@ class iMessageRelayConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            host = user_input[CONF_HOST].strip()
+            raw = user_input[CONF_HOST].strip()
+            host = raw.removeprefix("https://").removeprefix("http://").rstrip("/")
             port = user_input[CONF_PORT]
             token = user_input[CONF_TOKEN].strip()
 
