@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import ssl
 from typing import Any
 
 from homeassistant.config_entries import ConfigFlow
@@ -8,6 +10,8 @@ from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
 import voluptuous as vol
+
+_LOGGER = logging.getLogger(__name__)
 
 from .const import DOMAIN, DEFAULT_PORT
 
@@ -23,20 +27,24 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 async def _validate_connection(hass, host: str, port: int, token: str) -> str | None:
     """Return None on success, or an error key string on failure."""
-    session = async_get_clientsession(hass)
+    ssl_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ssl_ctx.check_hostname = False
+    ssl_ctx.verify_mode = ssl.CERT_NONE
+    session = async_get_clientsession(hass, verify_ssl=False)
     try:
         async with asyncio.timeout(10):
             async with session.get(
                 f"https://{host}:{port}/health",
                 headers={"Authorization": f"Bearer {token}"},
-                ssl=False,
+                ssl=ssl_ctx,
             ) as resp:
                 if resp.status == 401:
                     return "invalid_auth"
                 if resp.status != 200:
                     return "cannot_connect"
                 return None
-    except Exception:
+    except Exception as exc:
+        _LOGGER.warning("iMessageRelay connection check failed: %s", exc)
         return "cannot_connect"
 
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import ssl
 import uuid
 from datetime import timedelta
 
@@ -15,7 +17,7 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
     def __init__(self, hass: HomeAssistant, host: str, port: int, token: str) -> None:
         super().__init__(
             hass,
-            logger=__import__("logging").getLogger(__name__),
+            logger=logging.getLogger(__name__),
             name=DOMAIN,
             update_interval=timedelta(seconds=SCAN_INTERVAL),
         )
@@ -23,23 +25,26 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
         self.port = port
         self.token = token
         self._base_url = f"https://{host}:{port}"
+        self._ssl = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+        self._ssl.check_hostname = False
+        self._ssl.verify_mode = ssl.CERT_NONE
 
     @property
     def _headers(self) -> dict[str, str]:
         return {"Authorization": f"Bearer {self.token}"}
 
     async def _async_update_data(self) -> dict:
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.hass, verify_ssl=False)
         try:
             async with asyncio.timeout(10):
                 async with session.get(
-                    f"{self._base_url}/health", headers=self._headers, ssl=False
+                    f"{self._base_url}/health", headers=self._headers, ssl=self._ssl
                 ) as resp:
                     resp.raise_for_status()
                     health: dict = await resp.json()
 
                 async with session.get(
-                    f"{self._base_url}/aliases", headers=self._headers, ssl=False
+                    f"{self._base_url}/aliases", headers=self._headers, ssl=self._ssl
                 ) as resp:
                     resp.raise_for_status()
                     aliases: dict = await resp.json()
@@ -57,34 +62,34 @@ class iMessageRelayCoordinator(DataUpdateCoordinator):
         if attach:
             payload["attach"] = attach
 
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.hass, verify_ssl=False)
         async with asyncio.timeout(60):
             async with session.post(
                 f"{self._base_url}/send",
                 headers={**self._headers, "Idempotency-Key": str(uuid.uuid4()), "Content-Type": "application/json"},
                 json=payload,
-                ssl=False,
+                ssl=self._ssl,
             ) as resp:
                 resp.raise_for_status()
                 return await resp.json()
 
     async def async_add_alias(self, name: str, contact: str) -> None:
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.hass, verify_ssl=False)
         async with asyncio.timeout(10):
             async with session.post(
                 f"{self._base_url}/alias",
                 headers={**self._headers, "Content-Type": "application/json"},
                 json={"name": name, "contact": contact},
-                ssl=False,
+                ssl=self._ssl,
             ) as resp:
                 resp.raise_for_status()
 
     async def async_remove_alias(self, name: str) -> None:
-        session = async_get_clientsession(self.hass)
+        session = async_get_clientsession(self.hass, verify_ssl=False)
         async with asyncio.timeout(10):
             async with session.delete(
                 f"{self._base_url}/alias/{name}",
                 headers=self._headers,
-                ssl=False,
+                ssl=self._ssl,
             ) as resp:
                 resp.raise_for_status()
