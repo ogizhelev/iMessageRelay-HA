@@ -6,12 +6,17 @@ import os
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
+from homeassistant.components.webhook import (
+    async_generate_id,
+    async_register as webhook_register,
+    async_unregister as webhook_unregister,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_VERIFY_SSL, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 
-from .const import DOMAIN
+from .const import CONF_WEBHOOK_ID, DOMAIN, EVENT_MESSAGE_RECEIVED
 from .coordinator import iMessageRelayCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -30,6 +35,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await coordinator.async_config_entry_first_refresh()
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+    # Ensure a stable webhook ID is stored in the config entry.
+    webhook_id: str = entry.data.get(CONF_WEBHOOK_ID, "")
+    if not webhook_id:
+        webhook_id = async_generate_id()
+        hass.config_entries.async_update_entry(
+            entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
+        )
+
+    async def _handle_webhook(hass: HomeAssistant, _webhook_id: str, request) -> None:
+        try:
+            body: dict = await request.json()
+        except Exception:
+            body = {}
+
+        sender = body.get("sender") or body.get("from") or body.get("contact") or ""
+        message = body.get("message") or body.get("text") or body.get("body") or ""
+
+        hass.bus.async_fire(
+            EVENT_MESSAGE_RECEIVED,
+            {
+                "sender": sender,
+                "message": message,
+                "raw": body,
+            },
+        )
+        _LOGGER.debug("iMessageRelay inbound: sender=%r message=%r", sender, message)
+
+    webhook_register(
+        hass,
+        DOMAIN,
+        "iMessage Relay inbound",
+        webhook_id,
+        _handle_webhook,
+        allowed_methods=["POST"],
+    )
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -111,6 +152,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    webhook_id: str = entry.data.get(CONF_WEBHOOK_ID, "")
+    if webhook_id:
+        webhook_unregister(hass, webhook_id)
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)

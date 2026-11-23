@@ -141,5 +141,47 @@ data:
 | `sensor.imessage_relay_queue_depth` | Number of jobs waiting | `uptime`, `last_callback_at` |
 | `sensor.imessage_relay_runner_state` | `idle` / `dispatching` / `waitingForCallback` | — |
 | `sensor.imessage_relay_aliases` | Number of active aliases | Each alias as `name: contact` |
+| `sensor.imessage_relay_inbound_webhook` | Webhook path | `url` (full URL), `path` |
 
 The **Connection** sensor always reports a state (`connected`/`disconnected`) rather than going unavailable, so automations can react to the server going offline. It updates on every coordinator poll (default 30 s).
+
+The **Inbound Webhook** sensor state is the webhook path; expand its attributes for the full URL (requires HA external URL configured under Settings → System → Network).
+
+## Receiving replies (inbound messages)
+
+The integration registers a webhook so the iPhone can POST incoming iMessages back to HA. When a POST arrives, HA fires an `imessagerelay_message_received` event.
+
+### iOS Shortcut setup
+
+Create a Shortcut with the **"When I receive a message"** automation trigger, then add a **"Get Contents of URL"** action:
+
+| Field | Value |
+|-------|-------|
+| URL | value of `sensor.imessage_relay_inbound_webhook` → `url` attribute |
+| Method | `POST` |
+| Request Body | JSON |
+| `sender` | Shortcut variable: Sender Name (or phone number) |
+| `message` | Shortcut variable: Message Content |
+
+### HA automation trigger
+
+```yaml
+trigger:
+  - platform: event
+    event_type: imessagerelay_message_received
+action:
+  - service: persistent_notification.create
+    data:
+      title: "iMessage from {{ trigger.event.data.sender }}"
+      message: "{{ trigger.event.data.message }}"
+```
+
+The event payload contains:
+
+| Field | Description |
+|-------|-------------|
+| `sender` | Sender name or number from the POST body |
+| `message` | Message text |
+| `raw` | Full raw POST body dict |
+
+The webhook accepts any JSON keys — `sender`/`from`/`contact` for the sender, `message`/`text`/`body` for the text.

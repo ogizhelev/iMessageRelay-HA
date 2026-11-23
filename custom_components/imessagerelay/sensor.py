@@ -5,9 +5,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.network import NoURLAvailableError, get_url
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN
+from .const import CONF_WEBHOOK_ID, DOMAIN
 from .coordinator import iMessageRelayCoordinator
 
 
@@ -23,6 +24,7 @@ async def async_setup_entry(
             QueueDepthSensor(coordinator, entry),
             RunnerStateSensor(coordinator, entry),
             AliasesSensor(coordinator, entry),
+            WebhookSensor(hass, entry),
         ]
     )
 
@@ -126,3 +128,34 @@ class AliasesSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         return (self.coordinator.data or {}).get("aliases", {})
+
+
+class WebhookSensor(SensorEntity):
+    _attr_icon = "mdi:webhook"
+    _attr_has_entity_name = True
+    _attr_name = "Inbound Webhook"
+    _attr_should_poll = False
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        self.hass = hass
+        self._entry = entry
+        self._attr_unique_id = f"{entry.entry_id}_webhook"
+        self._attr_device_info = _device_info(entry)
+
+    @property
+    def native_value(self) -> str:
+        webhook_id = self._entry.data.get(CONF_WEBHOOK_ID, "")
+        return f"/api/webhook/{webhook_id}" if webhook_id else "not configured"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        webhook_id = self._entry.data.get(CONF_WEBHOOK_ID, "")
+        if not webhook_id:
+            return {}
+        path = f"/api/webhook/{webhook_id}"
+        try:
+            base = get_url(self.hass)
+            return {"url": f"{base}{path}", "path": path}
+        except NoURLAvailableError:
+            return {"path": path}
+
