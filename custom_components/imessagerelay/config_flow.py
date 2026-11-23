@@ -86,7 +86,7 @@ class iMessageRelayConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = error
             else:
                 return self.async_create_entry(
-                    title=f"iMessage Relay ({host})",
+                    title="iMessage Relay",
                     data={
                         CONF_HOST: host,
                         CONF_PORT: port,
@@ -125,7 +125,7 @@ class iMessageRelayConfigFlow(ConfigFlow, domain=DOMAIN):
                 errors["base"] = error
             else:
                 return self.async_create_entry(
-                    title=f"iMessage Relay ({self._host})",
+                    title="iMessage Relay",
                     data={
                         CONF_HOST: self._host,
                         CONF_PORT: self._port,
