@@ -5,7 +5,7 @@ import logging
 import ssl
 from typing import Any
 
-from homeassistant.config_entries import ConfigFlow
+from homeassistant.config_entries import ConfigFlow, ConfigFlowResult
 from homeassistant.const import CONF_HOST, CONF_PORT, CONF_TOKEN, CONF_VERIFY_SSL
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.service_info.zeroconf import ZeroconfServiceInfo
@@ -101,7 +101,45 @@ class iMessageRelayConfigFlow(ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_zeroconf(self, discovery_info: ZeroconfServiceInfo) -> dict:
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        errors: dict[str, str] = {}
+        entry = self._get_reconfigure_entry()
+
+        if user_input is not None:
+            raw = user_input[CONF_HOST].strip()
+            host = raw.removeprefix("https://").removeprefix("http://").rstrip("/")
+            port = user_input[CONF_PORT]
+            token = user_input[CONF_TOKEN].strip()
+            verify_ssl = user_input.get(CONF_VERIFY_SSL, False)
+
+            error = await _validate_connection(self.hass, host, port, token, verify_ssl)
+            if error:
+                errors["base"] = error
+            else:
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data={
+                        **entry.data,
+                        CONF_HOST: host,
+                        CONF_PORT: port,
+                        CONF_TOKEN: token,
+                        CONF_VERIFY_SSL: verify_ssl,
+                    },
+                )
+
+        current = entry.data
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_HOST, default=current.get(CONF_HOST, "")): str,
+                    vol.Required(CONF_PORT, default=current.get(CONF_PORT, DEFAULT_PORT)): int,
+                    vol.Required(CONF_TOKEN, default=current.get(CONF_TOKEN, "")): str,
+                    vol.Optional(CONF_VERIFY_SSL, default=current.get(CONF_VERIFY_SSL, False)): bool,
+                }
+            ),
+            errors=errors,
+        )
         self._host = discovery_info.host
         self._port = discovery_info.port or DEFAULT_PORT
 

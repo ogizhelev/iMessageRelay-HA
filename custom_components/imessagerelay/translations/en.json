@@ -18,6 +18,16 @@
           "token": "Bearer Token",
           "verify_ssl": "Verify SSL certificate"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure iMessage Relay",
+        "description": "Update the connection settings for this iMessage Relay instance.",
+        "data": {
+          "host": "Host / IP address",
+          "port": "Port",
+          "token": "Bearer Token",
+          "verify_ssl": "Verify SSL certificate"
+        }
       }
     },
     "error": {
