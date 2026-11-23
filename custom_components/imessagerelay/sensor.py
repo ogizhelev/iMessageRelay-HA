@@ -21,6 +21,7 @@ async def async_setup_entry(
         [
             QueueDepthSensor(coordinator, entry),
             RunnerStateSensor(coordinator, entry),
+            AliasesSensor(coordinator, entry),
         ]
     )
 
@@ -71,8 +72,25 @@ class RunnerStateSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntit
     def native_value(self) -> str | None:
         return self.coordinator.data.get("runnerState")
 
+
+class AliasesSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
+    _attr_icon = "mdi:account-multiple"
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = "aliases"
+    _attr_has_entity_name = True
+    _attr_name = "Aliases"
+
+    def __init__(self, coordinator: iMessageRelayCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_aliases"
+        self._attr_device_info = _device_info(entry)
+
+    @property
+    def native_value(self) -> int:
+        aliases = (self.coordinator.data or {}).get("aliases", {})
+        return len(aliases)
+
     @property
     def extra_state_attributes(self) -> dict:
-        data = self.coordinator.data or {}
-        aliases = data.get("aliases", {})
-        return {"aliases": list(aliases.keys()), "alias_count": len(aliases)}
+        aliases = (self.coordinator.data or {}).get("aliases", {})
+        return aliases
