@@ -1,1 +1,6 @@
-{"name": "iMessage Relay", "render_readme": true}
+{
+  "name": "iMessage Relay",
+  "content_in_root": false,
+  "homeassistant": "2024.1.0",
+  "iot_class": "local_polling"
+}
