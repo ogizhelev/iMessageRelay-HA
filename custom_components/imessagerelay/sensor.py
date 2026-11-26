@@ -1,7 +1,12 @@
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import PERCENTAGE
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -24,6 +29,7 @@ async def async_setup_entry(
             QueueDepthSensor(coordinator, entry),
             RunnerStateSensor(coordinator, entry),
             AliasesSensor(coordinator, entry),
+            BatterySensor(coordinator, entry),
             WebhookSensor(hass, entry),
         ]
     )
@@ -128,6 +134,53 @@ class AliasesSensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
     @property
     def extra_state_attributes(self) -> dict:
         return (self.coordinator.data or {}).get("aliases", {})
+
+
+class BatterySensor(CoordinatorEntity[iMessageRelayCoordinator], SensorEntity):
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_has_entity_name = True
+    _attr_name = "Battery"
+
+    def __init__(self, coordinator: iMessageRelayCoordinator, entry: ConfigEntry) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{entry.entry_id}_battery"
+        self._attr_device_info = _device_info(entry)
+
+    def _battery(self) -> dict:
+        return (self.coordinator.data or {}).get("battery") or {}
+
+    @property
+    def native_value(self) -> int | None:
+        percentage = self._battery().get("percentage")
+        if not isinstance(percentage, int) or percentage < 0:
+            return None
+        return percentage
+
+    @property
+    def icon(self) -> str:
+        battery = self._battery()
+        if battery.get("charging"):
+            return "mdi:battery-charging"
+        percentage = battery.get("percentage")
+        if not isinstance(percentage, int) or percentage < 0:
+            return "mdi:battery-unknown"
+        if percentage >= 95:
+            return "mdi:battery"
+        if percentage <= 5:
+            return "mdi:battery-alert"
+        return f"mdi:battery-{round(percentage / 10) * 10}"
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        battery = self._battery()
+        return {
+            "connected": battery.get("connected"),
+            "charging": battery.get("charging"),
+            "state": battery.get("state"),
+            "low_power_mode": battery.get("low_power_mode"),
+        }
 
 
 class WebhookSensor(SensorEntity):
